@@ -1,0 +1,78 @@
+COMMANDS
+---------
+
+Run Jenkins and mount volume
+`sudo docker run -p 80:8080 -p 50000:50000 -v $HOME/jenkins_home:/var/jenkins_home jenkins/jenkins:lts`
+
+Connect docker container to network
+
+`sudo docker network connect ubuntu_default_1`
+
+
+vpc-417b0225
+
+Run Jenkins:
+sudo docker run -d -p 80:8080 -p 50000:50000 -v $HOME/jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock --name ubuntu_jenkins_1 jenkins/jenkins:lts
+
+Run a command in docker container:
+`sudo docker run <IMAGE_NAME> <COMMAND>`
+
+Run docker-compose in jenkins container:
+`sudo docker run -v /var/run/docker.sock:/var/run/docker.sock jenkin:latest docker-compose up`
+
+Edit configs in Ansible
+`ansible-vault edit group_vars/datadog_api_key.yaml --ask-vault-pass`
+
+Push docker image to ECR
+`aws ecr get-login`
+`sudo docker build -t 026393418737.dkr.ecr.us-east-1.amazonaws.com/attentive/attentive-jenkins-devel:latest .`
+
+Add Users to attentive DB
+`./add_db_usrs.sh ~/code/attentive/devops-tools/python/usr/usr.py attentive-devel.c7phtyteyven.us-east-1.rds.amazonaws.com DqGynHz3h6PTonGZEu2B8BSTAV88CZggrgUT mysql attentive`
+
+Compress a whole directory
+`tar -zcvf archive-name.tar.gz directory-name`
+
+Decompress zipped archive to a specific directory
+`tar xvzf file.tar.gz -C directory-name`
+
+
+ADD DOCKER TO INSTANCE VIA ANSIBLE
+---
+- name: Remove older docker versions if present
+  apt:
+    pkg: '{{item}}'
+    state: absent
+  with_items:
+    - docker
+    - docker-engine
+
+- name: Ensure packages to allow apt to use repository over HTTPS
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+
+- name: Add Docker's official apt key.
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+    state: present
+  register: add_key
+  ignore_errors: true
+
+- name: Add Docker apt key if failed
+  shell: "curl -sSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -"
+  args:
+    warn: no
+  when: add_key|failed
+
+- name: Add Docker stable repository.
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable"
+    state: present
+    update_cache: DqGynHz3h6PTonGZEu2B8BSTAV88CZggrgUT
